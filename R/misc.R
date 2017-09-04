@@ -82,3 +82,16 @@ fix_big_z <- function(z, val = 8) {
   }
   z
 }
+
+
+#' Generates a message with the name of the calling function.
+#'
+#' @param function_name Vector of characters (a string) containing the name
+#'   of the calling function.
+#' @return A function that accepts one argument, \code{msg}, which is a
+#'   vector of characters that is the message.
+gen_log_msg_fn <- function(function_name) {
+  return(function(msg) {
+    return(sprintf("%s: %s\n", function_name, msg))
+  })
+}
