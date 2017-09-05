@@ -71,7 +71,7 @@ long_colnames_correct_type <- function(cols) {
 
 #' Checks whether all the _time invariant_ co-variates are
 #' present in the column name.
-#' 
+#'
 #' @param vec_timeinv Vector of strings (vector of characters)
 #'   that contains the time-invariant column names.
 #' @param df_colnames Vector of strings (vector of characters) that
@@ -182,25 +182,39 @@ fill_col <- function(df, col_regexp) {
 }
 
 #' Converts _long_ to _wide_ format for one variable.
-#' Assumes the input \code{data.frame} is already sorted as `df[with(df, order(get(key_var), get(mea_var))),]`
+#'
+#' Assumes the input \code{data.frame} is already sorted as
+#' `df[with(df, order(get(key_var), get(mea_var))),]`
+#' Note this function coheres the data.frame of `df` argument into a
+#' \code{\link[data.table]{data.table}} by _reference_. As a result, be ware
+#' when executing this function in parallel while changing the content of `df`
+#' argument.
 #'
 #' @param df \code{data.frame} to convert.
-#' @param oname
-#' @param target_val
-#' @param tol_ran
+#' @param oname Vector of characters indicating the _time invariant_ variable
+#'   name.
+#' @param target_val Numeric indicating the target measurement variable for
+#'   for _time variant_ variable (e.g., `AGEDAYS`)
+#' @param tol_ran Numeric indicating the extra tolerance of `target_val` to
+#'   extract _time variant_ variables. E.g., `tol_ran = 7` and
+#'   `target_val = 30` will attempt to extract time variant data upto
+#'   37 days.
 #' @param int_var
-#' @param str_val String (vector of characters) indicating the name of
+#' @param str_val Vector of characters indicating the name of
 #'   strategy to use when converting the data. Valid strategies are
 #'   'first', 'last', 'nearest' and 'weightedavg'. Default is `nearest`.
-#' @param key_var String (vector of characters) indicating the subject level
+#' @param key_var Vector of characters indicating the subject level
 #'  variable. Defaults to `SUBJID`
-#' @param mea_var String (vector of characters) indicating the measurement variable.
+#' @param mea_var Vector of characters indicating the measurement variable.
 #'   Defaults to `AGEDAYS`
 #'
 #' @return
-long_to_wide_one_var <- function(df, oname, target_val, tol_ran, int_var, str_val = "nearest", key_var = "SUBJID",
+long_to_wide_one_var <- function(df, oname,
+                                 target_val, tol_ran,
+                                 int_var, str_val = "nearest",
+                                 key_var = "SUBJID",
                                  mea_var = "AGEDAYS") {
-  dt1 <- setDT(df)[is.finite(get(int_var)), `:=`(offset, abs(get(mea_var) - target_val))]
+  dt1 <- data.table:setDT(df)[is.finite(get(int_var)), `:=`(offset, abs(get(mea_var) - target_val))]
   dt1 <- dt1[offset <= tol_ran, `:=`(new1, .(list(get_int_var_in_range(get(mea_var), target_val, offset,
                                                                        get(int_var), str_val)))), by = key_var]
   dt1 <- dt1[exists("new1"), `:=`(output_observed_on = sapply(new1, `[`, 1), output_value = sapply(new1,
@@ -317,10 +331,10 @@ long_to_wide_detailed <- function(df_long, vector_timeinvar = c(), list_timevar 
 }
 
 #'
-#' Note: This function coherces the \code{\link{data.frame}} in the parameter
+#' Note: This function coheres the \code{\link{data.frame}} in the parameter
 #' \code{dw_detailed} into a \code{\link[data.table]{data.table}} by
 #' _reference_ (as opposed to making a copy). As a result, beware when calling
-#' this function in parallelised function while making changes to
+#' this function in parallel while making changes to
 #' \code{dw_detailed}.
 #'
 #' @param dw_detailed \code{\link{long_to_wide_detailed}} function.
