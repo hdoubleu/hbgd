@@ -41,10 +41,12 @@ get_int_var_in_range <- function(par_a, par_b, par_c, par_d, par_e) {
   return(c(observed, ret_par_d))
 }
 
-
-# Input:
-# cols - Column names of the input (in the long format) data frame.
-check_data_long_colnames <- function(cols) {
+#' Type checking on the column names.
+#'
+#' @param cols A vector of strings (vector of characters), that
+#'   consists of the column names of a _long_ format data frame.
+#' @return Logical FALSE if the type checking fails.
+long_colnames_correct_type <- function(cols) {
   if (is.null(cols)) {
     return(FALSE)
   }
@@ -67,8 +69,17 @@ check_data_long_colnames <- function(cols) {
   return(TRUE)
 }
 
-
-check_vector_time_invariant <- function(vec_timeinv, df_colnames) {
+#' Checks whether all the _time invariant_ co-variates are
+#' present in the column name.
+#' 
+#' @param vec_timeinv Vector of strings (vector of characters)
+#'   that contains the time-invariant column names.
+#' @param df_colnames Vector of strings (vector of characters) that
+#'   contains the column names of _long_ format data frame.
+#' @return logical FALSE when invalied `vec_timeinv` is supplied or
+#'   not all the variables in `vec_timeinv` are present in
+#'   `df_colnames`
+check_time_invar_colnames <- function(vec_timeinv, df_colnames) {
   if (missing(vec_timeinv)) {
     return(TRUE)
   } else {
@@ -170,8 +181,23 @@ fill_col <- function(df, col_regexp) {
   return(df)
 }
 
-
-# Assuming the input df is already sorted as df[with(df, order(get(key_var), get(mea_var))),]
+#' Converts _long_ to _wide_ format for one variable.
+#' Assumes the input \code{data.frame} is already sorted as `df[with(df, order(get(key_var), get(mea_var))),]`
+#'
+#' @param df \code{data.frame} to convert.
+#' @param oname
+#' @param target_val
+#' @param tol_ran
+#' @param int_var
+#' @param str_val String (vector of characters) indicating the name of
+#'   strategy to use when converting the data. Valid strategies are
+#'   'first', 'last', 'nearest' and 'weightedavg'. Default is `nearest`.
+#' @param key_var String (vector of characters) indicating the subject level
+#'  variable. Defaults to `SUBJID`
+#' @param mea_var String (vector of characters) indicating the measurement variable.
+#'   Defaults to `AGEDAYS`
+#'
+#' @return
 long_to_wide_one_var <- function(df, oname, target_val, tol_ran, int_var, str_val = "nearest", key_var = "SUBJID",
                                  mea_var = "AGEDAYS") {
   dt1 <- setDT(df)[is.finite(get(int_var)), `:=`(offset, abs(get(mea_var) - target_val))]
@@ -188,10 +214,12 @@ long_to_wide_one_var <- function(df, oname, target_val, tol_ran, int_var, str_va
 }
 
 
+#' Converts data from _long_ to _wide_ format
 #'
 #' @param df_long \code{\link{data.frame}} that contains data in _long_ format.
 #'   The co-variates, which are columns, can be either _time variant_ (e.g., `MAGE`) or
-#'   _time invariant_ (e.g., `HAZ`).
+#'   _time invariant_ (e.g., `HAZ`). The data.frame _must_ contain the
+#'   columns `SUBJID` and `AGEDAYS`.
 #' @param vector_timeinvar A vector of _time invariant_ co-variates to extract
 #'    and include.
 #' @param list_timevar A list of _time variant_ co-variates to extract and
@@ -220,11 +248,11 @@ long_to_wide_detailed <- function(df_long, vector_timeinvar = c(), list_timevar 
 
   df_long <- df_long[with(df_long, order( get(colname_subjid), get(colname_agedays) ) ), ]
 
-  if (!check_data_long_colnames(df_long_col_names)) {
-    stop(gen_log_msg("Column names of the input data frame invalid."))
+  if (!long_colnames_correct_type(df_long_col_names)) {
+    stop(gen_log_msg("Column names of the input data frame have incorrect type."))
   }
 
-  if (!check_vector_time_invariant(vector_timeinvar, df_long_col_names)) {
+  if (!check_time_invar_colnames(vector_timeinvar, df_long_col_names)) {
     stop(gen_log_msg("Not all requested time invariant columns are present in the input data frame."))
   }
 
@@ -283,7 +311,7 @@ long_to_wide_detailed <- function(df_long, vector_timeinvar = c(), list_timevar 
     is.na(df_wide) <- df_wide == "NULL"
   }
 
-  df_wide <- fill_col(setDF(df_wide), "output_varname_*|input_varname_*|target_*|tolerance_*|strategy_*")
+  df_wide <- fill_col(data.table::setDF(df_wide), "output_varname_*|input_varname_*|target_*|tolerance_*|strategy_*")
 
   return(df_wide)
 }
